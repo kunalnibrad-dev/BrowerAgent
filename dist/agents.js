@@ -57,10 +57,7 @@ const SearchGoogle = new FunctionTool({
     execute: async (input) => {
         const { query } = input;
         if (!browser) {
-            browser = await chromium.launch({
-                headless: false,
-                slowMo: 100
-            });
+            ensureBrowser();
         }
         context = await browser.newContext();
         page = await context.newPage();
@@ -111,10 +108,24 @@ const Navigate = new FunctionTool({
     },
     execute: async (input) => {
         const { url } = input;
+        await ensureBrowser();
         await page.goto(url);
         return `Navigated to ${url}`;
     }
 });
+async function ensureBrowser() {
+    if (!browser) {
+        browser = await chromium.launch({
+            headless: false
+        });
+    }
+    if (!context) {
+        context = await browser.newContext();
+    }
+    if (!page) {
+        page = await context.newPage();
+    }
+}
 const closeBrowser = new FunctionTool({
     name: 'close_browser',
     description: 'Closes the browser.',
@@ -133,9 +144,17 @@ const closeBrowser = new FunctionTool({
 export const SearchAgent = new LlmAgent({
     name: 'search_agent',
     model: 'gemini-2.5-flash',
-    description: 'Searches Google for a specified query.',
-    instruction: `You are a helpful assistant that searches Google for a specified query.
-                Use the 'SearchGoogle' tool for this purpose.`,
+    description: 'web automation agent',
+    instruction: `You are a web automation agent.
+
+Your goals:
+- Search information
+- Click relevant results
+- Fill forms if required
+- Take screenshots after important steps
+- Extract page content
+- Always reason step-by-step
+`,
     tools: [SearchGoogle, closeBrowser, FillInput, Navigate, TakeScreenshot, ClickElement],
 });
 // const func=async (input: any) => {
